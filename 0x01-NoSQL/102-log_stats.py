@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Log stats
-"""
+"""Log stats"""
 from pymongo import MongoClient
 
 if __name__ == "__main__":
@@ -19,5 +17,13 @@ if __name__ == "__main__":
         count = nginx_collection.count_documents({"method": value})
         print(f"\tmethod {value}: {count}")
     print(f"{nginx_collection.count_documents({path: status})} status check")
+    pipeline = [
+        {"$group": {"_id": "$ip", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10},
+        {"$project": {"_id": 0, "ip": "$_id", "count": 1}},
+    ]
+    ip_collection = nginx_collection.aggregate(pipeline)
     print("IPs:")
-    print(nginx_collection.count_documents({"ip": {"$regex": "^[0-9]"}}))
+    for ip in ip_collection:
+        print("\t{}: {}".format(ip.get("ip"), ip.get("count")))
